@@ -51,6 +51,7 @@ class MuZeroConfig:
         self.self_play_delay = 0
         self.training_delay = 0
         self.ratio = 1.5
+        self.muzero_player = 0
 
     def visit_softmax_temperature_fn(self, trained_steps: int) -> float:
         return 1.0 if trained_steps < 50 else 0.5
@@ -58,8 +59,10 @@ class MuZeroConfig:
 class Game(AbstractGame):
     def __init__(self, seed=None, data_file="stock_prices.csv"):
         import pandas as pd
-        self.data = pd.read_csv(data_file)
-        self.prices = self.data["Close"].values
+        self.data = pd.read_csv(data_file, index_col=0)
+        if "Ticker" in self.data.index:
+            self.data = self.data.drop("Ticker")
+        self.prices = self.data["Close"].astype(float).values
         self.index = 0
 
     def step(self, action):
@@ -82,7 +85,7 @@ class Game(AbstractGame):
 
     def _get_obs(self):
         val = self.prices[self.index] if self.index < len(self.prices) else 0.0
-        return np.array([[val]])
+        return np.array([[[val]]], dtype=np.float32)
 
     def close(self):
         pass

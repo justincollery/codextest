@@ -5,7 +5,7 @@ import numpy
 import ray
 import torch
 
-import models
+from . import models
 
 
 @ray.remote

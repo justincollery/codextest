@@ -7,18 +7,21 @@ import pickle
 import sys
 import time
 
-import nevergrad
+try:
+    import nevergrad
+except Exception:  # pragma: no cover - optional dependency may be missing
+    nevergrad = None
 import numpy
 import ray
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
-import diagnose_model
-import models
-import replay_buffer
-import self_play
-import shared_storage
-import trainer
+from . import diagnose_model
+from . import models
+from . import replay_buffer
+from . import self_play
+from . import shared_storage
+from . import trainer
 
 
 class MuZero:
@@ -42,7 +45,7 @@ class MuZero:
     def __init__(self, game_name, config=None, split_resources_in=1):
         # Load the game and the config from the module with the game name
         try:
-            game_module = importlib.import_module("games." + game_name)
+            game_module = importlib.import_module("muzero_general.games." + game_name)
             self.Game = game_module.Game
             self.config = game_module.MuZeroConfig()
         except ModuleNotFoundError as err:
@@ -510,6 +513,9 @@ def hyperparameter_search(
 
         num_tests (int): Number of games to average for evaluating an experiment.
     """
+    if nevergrad is None:
+        raise ImportError("nevergrad is required for hyperparameter search")
+
     optimizer = nevergrad.optimizers.OnePlusOne(
         parametrization=parametrization, budget=budget
     )
@@ -696,6 +702,10 @@ if __name__ == "__main__":
                 # Parametrization documentation: https://facebookresearch.github.io/nevergrad/parametrization.html
                 muzero.terminate_workers()
                 del muzero
+                if nevergrad is None:
+                    print("nevergrad not available, skipping hyperparameter search")
+                    muzero = MuZero(game_name)
+                    continue
                 budget = 20
                 parallel_experiments = 2
                 lr_init = nevergrad.p.Log(lower=0.0001, upper=0.1)
